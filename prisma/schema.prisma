@@ -87,6 +87,9 @@ model Usuario {
   atencionesCreadas    Atencion[]          @relation("AtencionCreadaPor")
   atencionesEditadas   Atencion[]          @relation("AtencionActualizadaPor")
   notasAclaratorias    NotaAclaratoria[]
+  llegadasMarcadas     Marcacion[]         @relation("MarcacionLlegadaPor")
+  ingresosMarcados     Marcacion[]         @relation("MarcacionIngresoPor")
+  finesMarcados        Marcacion[]         @relation("MarcacionFinPor")
   auditoria            RegistroAuditoria[]
 
   @@map("usuario")
@@ -176,12 +179,33 @@ model Cita {
   actualizadoPor Usuario?    @relation("CitaActualizadaPor", fields: [actualizadoPorId], references: [id])
   canceladaPor   Usuario?    @relation("CitaCanceladaPor", fields: [canceladaPorId], references: [id])
   atencion       Atencion?
+  marcacion      Marcacion?
 
   @@index([consultorioId, inicio])
   @@index([profesionalId, inicio])
   @@index([pacienteId, inicio])
   @@index([estado, inicio])
   @@map("cita")
+}
+
+// ─── Marcación de tiempos ───────────────────────────────────────────────────
+
+/// Llegada → ingreso → fin, en ese orden (CHECK en SQL). Solo el Dueño corrige (FR-030).
+model Marcacion {
+  citaId       String    @id @map("cita_id") @db.Uuid
+  llegadaEn    DateTime? @map("llegada_en") @db.Timestamptz(6)
+  llegadaPorId String?   @map("llegada_por") @db.Uuid
+  ingresoEn    DateTime? @map("ingreso_en") @db.Timestamptz(6)
+  ingresoPorId String?   @map("ingreso_por") @db.Uuid
+  finEn        DateTime? @map("fin_en") @db.Timestamptz(6)
+  finPorId     String?   @map("fin_por") @db.Uuid
+
+  cita       Cita     @relation(fields: [citaId], references: [id])
+  llegadaPor Usuario? @relation("MarcacionLlegadaPor", fields: [llegadaPorId], references: [id])
+  ingresoPor Usuario? @relation("MarcacionIngresoPor", fields: [ingresoPorId], references: [id])
+  finPor     Usuario? @relation("MarcacionFinPor", fields: [finPorId], references: [id])
+
+  @@map("marcacion")
 }
 
 // ─── Atenciones e historial ─────────────────────────────────────────────────

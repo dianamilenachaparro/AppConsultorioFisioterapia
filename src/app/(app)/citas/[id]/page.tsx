@@ -6,7 +6,9 @@ import { formatearFechaHora, formatearFechaLarga, fechaBogota, formatearHora } f
 import { NOMBRE_ZONA } from "@/lib/validacion/cita";
 import { paginaProtegida } from "@/server/auth/paginas";
 import { citaParaPagina } from "@/server/citas/pagina";
+import { obtenerMarcacion } from "@/server/marcaciones/servicio";
 import { AccionesCita } from "./acciones-cita";
+import { TiemposCita } from "./tiempos";
 
 export default async function DetalleCita({ params }: PageProps<"/citas/[id]">) {
   const sesion = await paginaProtegida("citas:listar");
@@ -65,6 +67,15 @@ export default async function DetalleCita({ params }: PageProps<"/citas/[id]">) 
           )}
         </CardContent>
       </Card>
+
+      {cita.estado !== "CANCELADA" && (
+        <TiemposCita
+          citaId={cita.id}
+          fecha={fechaBogota(cita.inicio)}
+          tiempos={await obtenerMarcacion(cita.id)}
+          puedeCorregir={puede(sesion.rol, "marcaciones:corregir")}
+        />
+      )}
 
       <AccionesCita
         id={cita.id}
