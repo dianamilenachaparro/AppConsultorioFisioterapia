@@ -8,6 +8,7 @@ import { createInterface } from "node:readline/promises";
 import { hash } from "@node-rs/argon2";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
+import { asegurarCategoriasEgreso } from "../src/lib/categorias-egreso";
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DIRECT_URL ?? process.env.DATABASE_URL!, options: "-c timezone=UTC" }),
@@ -55,6 +56,7 @@ async function duenoInicial() {
 
 async function main() {
   await consultorios();
+  await asegurarCategoriasEgreso(prisma);
   await duenoInicial();
 }
 

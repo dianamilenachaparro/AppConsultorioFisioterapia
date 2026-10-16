@@ -6,7 +6,8 @@ import "dotenv/config";
 import { hash } from "@node-rs/argon2";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
-import { hoyBogota, instanteBogota, sumarDias } from "../src/lib/tiempo";
+import { asegurarCategoriasEgreso } from "../src/lib/categorias-egreso";
+import { columnaDateDeFecha, hoyBogota, instanteBogota, sumarDias } from "../src/lib/tiempo";
 
 const url = process.env.DIRECT_URL ?? process.env.DATABASE_URL!;
 if (url.includes("neon.tech") && !process.argv.includes("--forzar")) {
@@ -145,6 +146,39 @@ async function main() {
           notasEvolucion: "Responde bien al tratamiento; continuar plan en casa.",
           creadoPorId: cita.profesionalId,
           creadoEn: new Date(inicio.getTime() + 60 * 60_000),
+        },
+      });
+    }
+  }
+
+  // Insumos de ejemplo (uno bajo el mínimo), con su ajuste inicial de stock.
+  await asegurarCategoriasEgreso(prisma);
+  if ((await prisma.insumo.count()) === 0) {
+    const insumos: [string, number, number, number, number][] = [
+      // nombre, costo, precio de venta, stock, mínimo
+      ["Gel frío 250 ml", 12_000, 22_000, 15, 5],
+      ["Rodillera elástica", 18_000, 35_000, 8, 3],
+      ["Banda elástica de resistencia", 9_000, 18_000, 20, 5],
+      ["Cojín cervical", 45_000, 79_000, 2, 3],
+      ["Crema analgésica 60 g", 15_000, 28_000, 12, 4],
+    ];
+    for (const [nombre, costo, precioVenta, stock, stockMinimo] of insumos) {
+      await prisma.insumo.create({
+        data: {
+          nombre,
+          costo,
+          precioVenta,
+          stock,
+          stockMinimo,
+          movimientos: {
+            create: {
+              tipo: "AJUSTE_INICIAL",
+              cantidad: stock,
+              valorUnitario: costo,
+              fecha: columnaDateDeFecha(hoyBogota()),
+              creadoPorId: usuarios["1000000009"],
+            },
+          },
         },
       });
     }

@@ -77,20 +77,24 @@ model Usuario {
   creadoEn            DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
   actualizadoEn       DateTime  @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
 
-  sesiones             Sesion[]
-  citasComoProfesional Cita[]              @relation("CitaProfesional")
-  citasCreadas         Cita[]              @relation("CitaCreadaPor")
-  citasActualizadas    Cita[]              @relation("CitaActualizadaPor")
-  citasCanceladas      Cita[]              @relation("CitaCanceladaPor")
-  pacientesCreados     Paciente[]          @relation("PacienteCreadoPor")
-  atencionesComoProf   Atencion[]          @relation("AtencionProfesional")
-  atencionesCreadas    Atencion[]          @relation("AtencionCreadaPor")
-  atencionesEditadas   Atencion[]          @relation("AtencionActualizadaPor")
-  notasAclaratorias    NotaAclaratoria[]
-  llegadasMarcadas     Marcacion[]         @relation("MarcacionLlegadaPor")
-  ingresosMarcados     Marcacion[]         @relation("MarcacionIngresoPor")
-  finesMarcados        Marcacion[]         @relation("MarcacionFinPor")
-  auditoria            RegistroAuditoria[]
+  sesiones               Sesion[]
+  citasComoProfesional   Cita[]                 @relation("CitaProfesional")
+  citasCreadas           Cita[]                 @relation("CitaCreadaPor")
+  citasActualizadas      Cita[]                 @relation("CitaActualizadaPor")
+  citasCanceladas        Cita[]                 @relation("CitaCanceladaPor")
+  pacientesCreados       Paciente[]             @relation("PacienteCreadoPor")
+  atencionesComoProf     Atencion[]             @relation("AtencionProfesional")
+  atencionesCreadas      Atencion[]             @relation("AtencionCreadaPor")
+  atencionesEditadas     Atencion[]             @relation("AtencionActualizadaPor")
+  notasAclaratorias      NotaAclaratoria[]
+  llegadasMarcadas       Marcacion[]            @relation("MarcacionLlegadaPor")
+  ingresosMarcados       Marcacion[]            @relation("MarcacionIngresoPor")
+  finesMarcados          Marcacion[]            @relation("MarcacionFinPor")
+  movInventarioCreados   MovimientoInventario[] @relation("MovInventarioCreadoPor")
+  movInventarioAnulados  MovimientoInventario[] @relation("MovInventarioAnuladoPor")
+  movFinancierosCreados  MovimientoFinanciero[] @relation("MovFinancieroCreadoPor")
+  movFinancierosAnulados MovimientoFinanciero[] @relation("MovFinancieroAnuladoPor")
+  auditoria              RegistroAuditoria[]
 
   @@map("usuario")
 }
@@ -172,14 +176,15 @@ model Cita {
   actualizadoPorId       String?      @map("actualizado_por") @db.Uuid
   actualizadoEn          DateTime     @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
 
-  paciente       Paciente    @relation(fields: [pacienteId], references: [id])
-  profesional    Usuario     @relation("CitaProfesional", fields: [profesionalId], references: [id])
-  consultorio    Consultorio @relation(fields: [consultorioId], references: [id])
-  creadoPor      Usuario     @relation("CitaCreadaPor", fields: [creadoPorId], references: [id])
-  actualizadoPor Usuario?    @relation("CitaActualizadaPor", fields: [actualizadoPorId], references: [id])
-  canceladaPor   Usuario?    @relation("CitaCanceladaPor", fields: [canceladaPorId], references: [id])
+  paciente       Paciente               @relation(fields: [pacienteId], references: [id])
+  profesional    Usuario                @relation("CitaProfesional", fields: [profesionalId], references: [id])
+  consultorio    Consultorio            @relation(fields: [consultorioId], references: [id])
+  creadoPor      Usuario                @relation("CitaCreadaPor", fields: [creadoPorId], references: [id])
+  actualizadoPor Usuario?               @relation("CitaActualizadaPor", fields: [actualizadoPorId], references: [id])
+  canceladaPor   Usuario?               @relation("CitaCanceladaPor", fields: [canceladaPorId], references: [id])
   atencion       Atencion?
   marcacion      Marcacion?
+  cobros         MovimientoFinanciero[]
 
   @@index([consultorioId, inicio])
   @@index([profesionalId, inicio])
@@ -255,6 +260,107 @@ model NotaAclaratoria {
 
   @@index([atencionId])
   @@map("nota_aclaratoria")
+}
+
+// ─── Inventario y finanzas ──────────────────────────────────────────────────
+// Valores en pesos colombianos enteros. CHECKs y unicidad sin mayúsculas en SQL.
+
+model Insumo {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Único sin distinguir mayúsculas (índice sobre lower(nombre) en SQL).
+  nombre        String
+  /// ≥ 0 (COP)
+  costo         Int
+  /// ≥ 0 (COP)
+  precioVenta   Int      @map("precio_venta")
+  /// ≥ 0; solo cambia por movimientos.
+  stock         Int      @default(0)
+  /// ≥ 0
+  stockMinimo   Int      @default(0) @map("stock_minimo")
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  movimientos MovimientoInventario[]
+
+  @@map("insumo")
+}
+
+model MovimientoInventario {
+  id              String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  insumoId        String                   @map("insumo_id") @db.Uuid
+  tipo            TipoMovimientoInventario
+  /// > 0
+  cantidad        Int
+  /// VENTA: precio de venta usado; REPOSICION: costo unitario pagado; AJUSTE_INICIAL: costo.
+  valorUnitario   Int                      @map("valor_unitario")
+  /// Día Bogotá.
+  fecha           DateTime                 @db.Date
+  anulado         Boolean                  @default(false)
+  anuladoPorId    String?                  @map("anulado_por") @db.Uuid
+  anuladoEn       DateTime?                @map("anulado_en") @db.Timestamptz(6)
+  motivoAnulacion String?                  @map("motivo_anulacion")
+  creadoPorId     String                   @map("creado_por") @db.Uuid
+  creadoEn        DateTime                 @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  insumo     Insumo                @relation(fields: [insumoId], references: [id])
+  anuladoPor Usuario?              @relation("MovInventarioAnuladoPor", fields: [anuladoPorId], references: [id])
+  creadoPor  Usuario               @relation("MovInventarioCreadoPor", fields: [creadoPorId], references: [id])
+  financiero MovimientoFinanciero?
+
+  @@index([insumoId, creadoEn])
+  @@map("movimiento_inventario")
+}
+
+model CategoriaEgreso {
+  id     String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// ARRIENDO, SERVICIOS_PUBLICOS, COMPRA_INSUMOS, NOMINA, MANTENIMIENTO, OTROS
+  clave  String  @unique
+  nombre String
+  activo Boolean @default(true)
+
+  movimientos MovimientoFinanciero[]
+
+  @@map("categoria_egreso")
+}
+
+/// Coherencia tipo/subtipo/categoría y anulación completa: CHECKs en SQL.
+model MovimientoFinanciero {
+  id                     String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tipo                   TipoMovimientoFinanciero
+  /// Obligatorio si INGRESO, nulo si EGRESO.
+  subtipoIngreso         SubtipoIngreso?          @map("subtipo_ingreso")
+  /// Obligatorio si EGRESO, nulo si INGRESO.
+  categoriaEgresoId      String?                  @map("categoria_egreso_id") @db.Uuid
+  /// Día Bogotá.
+  fecha                  DateTime                 @db.Date
+  /// > 0 (COP)
+  valor                  Int
+  medioPago              MedioPago                @map("medio_pago")
+  descripcion            String
+  /// Obligatorio si subtipo TERAPIA; una cita admite varios cobros (abonos).
+  citaId                 String?                  @map("cita_id") @db.Uuid
+  /// Obligatorio si VENTA_INSUMOS o egreso de reposición.
+  movimientoInventarioId String?                  @unique @map("movimiento_inventario_id") @db.Uuid
+  anulado                Boolean                  @default(false)
+  anuladoPorId           String?                  @map("anulado_por") @db.Uuid
+  anuladoEn              DateTime?                @map("anulado_en") @db.Timestamptz(6)
+  motivoAnulacion        String?                  @map("motivo_anulacion")
+  creadoPorId            String                   @map("creado_por") @db.Uuid
+  creadoEn               DateTime                 @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  categoriaEgreso      CategoriaEgreso?      @relation(fields: [categoriaEgresoId], references: [id])
+  cita                 Cita?                 @relation(fields: [citaId], references: [id])
+  movimientoInventario MovimientoInventario? @relation(fields: [movimientoInventarioId], references: [id])
+  anuladoPor           Usuario?              @relation("MovFinancieroAnuladoPor", fields: [anuladoPorId], references: [id])
+  creadoPor            Usuario               @relation("MovFinancieroCreadoPor", fields: [creadoPorId], references: [id])
+
+  @@index([fecha])
+  @@index([tipo, fecha])
+  @@index([medioPago, fecha])
+  @@index([citaId])
+  @@index([creadoPorId, creadoEn])
+  @@map("movimiento_financiero")
 }
 
 // ─── Auditoría (append-only por trigger) ────────────────────────────────────
