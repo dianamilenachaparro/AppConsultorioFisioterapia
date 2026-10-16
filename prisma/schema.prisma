@@ -1,0 +1,199 @@
+// Modelo de datos: specs/001-gestion-consultorio/data-model.md
+// Las restricciones que Prisma no puede expresar (EXCLUDE, CHECK, triggers)
+// viven en el SQL manual de cada migración. No borrarlas.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enumeraciones ──────────────────────────────────────────────────────────
+
+enum Rol {
+  DUENO
+  RECEPCIONISTA
+  PROFESIONAL
+}
+
+enum EstadoCita {
+  PROGRAMADA
+  ASISTIDA
+  CANCELADA
+}
+
+enum ZonaCorporal {
+  CERVICAL
+  DORSAL
+  LUMBAR
+  HOMBRO
+  CODO
+  MUNECA_MANO
+  CADERA
+  RODILLA
+  TOBILLO_PIE
+  OTRA
+}
+
+enum MedioPago {
+  EFECTIVO
+  TRANSFERENCIA
+}
+
+enum TipoMovimientoFinanciero {
+  INGRESO
+  EGRESO
+}
+
+enum SubtipoIngreso {
+  TERAPIA
+  VENTA_INSUMOS
+}
+
+enum TipoMovimientoInventario {
+  AJUSTE_INICIAL
+  VENTA
+  REPOSICION
+}
+
+// ─── Usuarios y sesiones ────────────────────────────────────────────────────
+
+model Usuario {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Único; solo dígitos, 5–15 caracteres.
+  cedula              String    @unique
+  nombreCompleto      String    @map("nombre_completo")
+  rol                 Rol
+  /// Asignable a citas si activo AND atiende_pacientes. Nunca true para RECEPCIONISTA (CHECK en SQL).
+  atiendePacientes    Boolean   @default(false) @map("atiende_pacientes")
+  passwordHash        String    @map("password_hash")
+  activo              Boolean   @default(true)
+  intentosFallidos    Int       @default(0) @map("intentos_fallidos") @db.SmallInt
+  bloqueadoHasta      DateTime? @map("bloqueado_hasta") @db.Timestamptz(6)
+  debeCambiarPassword Boolean   @default(true) @map("debe_cambiar_password")
+  creadoEn            DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn       DateTime  @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  sesiones             Sesion[]
+  citasComoProfesional Cita[]              @relation("CitaProfesional")
+  citasCreadas         Cita[]              @relation("CitaCreadaPor")
+  citasActualizadas    Cita[]              @relation("CitaActualizadaPor")
+  citasCanceladas      Cita[]              @relation("CitaCanceladaPor")
+  pacientesCreados     Paciente[]          @relation("PacienteCreadoPor")
+  auditoria            RegistroAuditoria[]
+
+  @@map("usuario")
+}
+
+model Sesion {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuarioId       String   @map("usuario_id") @db.Uuid
+  /// SHA-256 del token de la cookie; el token nunca se guarda.
+  tokenHash       String   @unique @map("token_hash")
+  creadaEn        DateTime @default(now()) @map("creada_en") @db.Timestamptz(6)
+  ultimaActividad DateTime @default(now()) @map("ultima_actividad") @db.Timestamptz(6)
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@map("sesion")
+}
+
+// ─── Consultorios y pacientes ───────────────────────────────────────────────
+
+model Consultorio {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre        String   @unique
+  orden         Int      @default(0) @db.SmallInt
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  citas Cita[]
+
+  @@map("consultorio")
+}
+
+model Paciente {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Único; alfanumérico 4–20, normalizado sin puntos, guiones ni espacios.
+  documento       String   @unique
+  nombreCompleto  String   @map("nombre_completo")
+  telefono        String
+  fechaNacimiento DateTime @map("fecha_nacimiento") @db.Date
+  direccion       String
+  departamento    String
+  ciudad          String
+  barrio          String
+  creadoPorId     String   @map("creado_por") @db.Uuid
+  creadoEn        DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn   DateTime @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  creadoPor Usuario @relation("PacienteCreadoPor", fields: [creadoPorId], references: [id])
+  citas     Cita[]
+
+  @@index([nombreCompleto(ops: raw("gin_trgm_ops"))], type: Gin, map: "paciente_nombre_trgm_idx")
+  @@map("paciente")
+}
+
+// ─── Citas ──────────────────────────────────────────────────────────────────
+
+model Cita {
+  id                     String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pacienteId             String       @map("paciente_id") @db.Uuid
+  profesionalId          String       @map("profesional_id") @db.Uuid
+  consultorioId          String       @map("consultorio_id") @db.Uuid
+  /// Minutos :00 o :30 hora Bogotá; ≥ 07:30.
+  inicio                 DateTime     @db.Timestamptz(6)
+  /// Múltiplo de 30, 30–570.
+  duracionMin            Int          @map("duracion_min") @db.SmallInt
+  /// = inicio + duracion_min; ≤ 17:00 del mismo día (Bogotá).
+  fin                    DateTime     @db.Timestamptz(6)
+  motivo                 String
+  zonaCorporal           ZonaCorporal @map("zona_corporal")
+  estado                 EstadoCita   @default(PROGRAMADA)
+  retroactiva            Boolean      @default(false)
+  observacionCancelacion String?      @map("observacion_cancelacion")
+  canceladaPorId         String?      @map("cancelada_por") @db.Uuid
+  canceladaEn            DateTime?    @map("cancelada_en") @db.Timestamptz(6)
+  creadoPorId            String       @map("creado_por") @db.Uuid
+  creadoEn               DateTime     @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoPorId       String?      @map("actualizado_por") @db.Uuid
+  actualizadoEn          DateTime     @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  paciente       Paciente    @relation(fields: [pacienteId], references: [id])
+  profesional    Usuario     @relation("CitaProfesional", fields: [profesionalId], references: [id])
+  consultorio    Consultorio @relation(fields: [consultorioId], references: [id])
+  creadoPor      Usuario     @relation("CitaCreadaPor", fields: [creadoPorId], references: [id])
+  actualizadoPor Usuario?    @relation("CitaActualizadaPor", fields: [actualizadoPorId], references: [id])
+  canceladaPor   Usuario?    @relation("CitaCanceladaPor", fields: [canceladaPorId], references: [id])
+
+  @@index([consultorioId, inicio])
+  @@index([profesionalId, inicio])
+  @@index([pacienteId, inicio])
+  @@index([estado, inicio])
+  @@map("cita")
+}
+
+// ─── Auditoría (append-only por trigger) ────────────────────────────────────
+
+model RegistroAuditoria {
+  id        BigInt   @id @default(autoincrement())
+  usuarioId String   @map("usuario_id") @db.Uuid
+  accion    String
+  entidad   String
+  entidadId String   @map("entidad_id")
+  antes     Json?
+  despues   Json?
+  motivo    String?
+  creadoEn  DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@index([entidad, entidadId])
+  @@index([creadoEn])
+  @@map("registro_auditoria")
+}
