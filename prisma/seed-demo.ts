@@ -14,7 +14,7 @@ if (url.includes("neon.tech") && !process.argv.includes("--forzar")) {
   process.exit(1);
 }
 
-const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: url }) });
+const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: url, options: "-c timezone=UTC" }) });
 
 const USUARIOS = [
   { cedula: "1000000001", nombreCompleto: "Laura Recepción", rol: "RECEPCIONISTA" as const, atiendePacientes: false },

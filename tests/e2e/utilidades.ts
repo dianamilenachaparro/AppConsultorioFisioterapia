@@ -20,3 +20,10 @@ export async function iniciarSesion(page: Page, cedula: string) {
   await page.getByRole("button", { name: "Ingresar" }).click();
   await page.waitForURL((url) => !url.pathname.startsWith("/login"));
 }
+
+/** Devuelve el menú principal; en celular primero lo abre desde el botón "Abrir menú". */
+export async function abrirMenu(page: Page) {
+  const boton = page.getByRole("button", { name: "Abrir menú" });
+  if (await boton.isVisible()) await boton.click();
+  return page.getByRole("navigation", { name: "Menú principal" }).filter({ visible: true });
+}
