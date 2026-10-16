@@ -20,6 +20,8 @@ export async function bloquearCita(tx: Tx, id: string) {
 async function validarReversion(tx: Tx, citaId: string) {
   const atencion = await tx.atencion.findUnique({ where: { citaId }, select: { id: true } });
   if (atencion) throw new ErrorDominio("ESTADO_INVALIDO", "La cita tiene una atención registrada");
+  const cobros = await tx.movimientoFinanciero.count({ where: { citaId, subtipoIngreso: "TERAPIA", anulado: false } });
+  if (cobros > 0) throw new ErrorDominio("ESTADO_INVALIDO", "La cita tiene cobros registrados");
 }
 
 export async function marcarAsistida(sesion: Sesion, entrada: { id: string }) {

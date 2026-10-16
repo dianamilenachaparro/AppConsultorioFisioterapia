@@ -94,6 +94,7 @@ model Usuario {
   movInventarioAnulados  MovimientoInventario[] @relation("MovInventarioAnuladoPor")
   movFinancierosCreados  MovimientoFinanciero[] @relation("MovFinancieroCreadoPor")
   movFinancierosAnulados MovimientoFinanciero[] @relation("MovFinancieroAnuladoPor")
+  conexionGoogle         ConexionGoogle?
   auditoria              RegistroAuditoria[]
 
   @@map("usuario")
@@ -361,6 +362,20 @@ model MovimientoFinanciero {
   @@index([citaId])
   @@index([creadoPorId, creadoEn])
   @@map("movimiento_financiero")
+}
+
+/// Cuenta de Google del Dueño para exportar a Sheets (contracts/exportacion-google-sheets.md).
+model ConexionGoogle {
+  usuarioId           String   @id @map("usuario_id") @db.Uuid
+  /// Para mostrar "Conectado como …".
+  emailGoogle         String   @map("email_google")
+  /// AES-256-GCM con GOOGLE_TOKEN_KEY; nunca se guarda en claro.
+  refreshTokenCifrado String   @map("refresh_token_cifrado")
+  conectadoEn         DateTime @default(now()) @map("conectado_en") @db.Timestamptz(6)
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@map("conexion_google")
 }
 
 // ─── Auditoría (append-only por trigger) ────────────────────────────────────

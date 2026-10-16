@@ -17,14 +17,13 @@ test.describe("US1 – acceso por rol", () => {
     await expect(menu.getByRole("link", { name: "Administración" })).toHaveCount(0);
   });
 
-  // `/finanzas` aún no existe (T104); hasta entonces responde 404 y no la página de "sin permiso".
-  test.fixme("Recepcionista no puede abrir finanzas", async ({ page }) => {
+  test("Recepcionista no puede abrir finanzas", async ({ page }) => {
     await iniciarSesion(page, USUARIOS_DEMO.recepcionista);
     await page.goto("/finanzas");
     await expect(page.getByText("No tienes permiso para ver esta sección")).toBeVisible();
   });
 
-  test.fixme("Profesional no puede abrir finanzas", async ({ page }) => {
+  test("Profesional no puede abrir finanzas", async ({ page }) => {
     await iniciarSesion(page, USUARIOS_DEMO.profesional);
     await page.goto("/finanzas");
     await expect(page.getByText("No tienes permiso para ver esta sección")).toBeVisible();

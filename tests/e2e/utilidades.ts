@@ -18,7 +18,8 @@ export async function iniciarSesion(page: Page, cedula: string) {
   await page.getByLabel("Cédula").fill(cedula);
   await page.getByLabel("Contraseña").fill(PASSWORD_DEMO);
   await page.getByRole("button", { name: "Ingresar" }).click();
-  await page.waitForURL((url) => !url.pathname.startsWith("/login"));
+  // Tras el login se pasa por "/", que redirige según el rol: esperar la página final.
+  await page.waitForURL((url) => url.pathname !== "/" && !url.pathname.startsWith("/login"));
 }
 
 /** Devuelve el menú principal; en celular primero lo abre desde el botón "Abrir menú". */

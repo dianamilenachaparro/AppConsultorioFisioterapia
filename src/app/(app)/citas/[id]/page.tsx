@@ -90,6 +90,11 @@ export default async function DetalleCita({ params }: PageProps<"/citas/[id]">) 
             Atención
           </Link>
         )}
+        {puede(sesion.rol, "cobro:registrar") && cita.estado === "ASISTIDA" && (
+          <Link href={`/citas/${cita.id}/cobro`} className="font-medium underline-offset-4 hover:underline">
+            Registrar cobro
+          </Link>
+        )}
         <Link href={`/pacientes/${cita.paciente.id}/historial`} className="underline-offset-4 hover:underline">
           Ver historial del paciente
         </Link>

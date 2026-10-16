@@ -73,9 +73,14 @@ export function BotonesMarcacion({
         </p>
       )}
       {(asistida || optimista.ingresoEn) && (
-        <Link href={`/citas/${citaId}/atencion`} className="text-sm font-medium underline-offset-4 hover:underline">
-          {tieneAtencion ? "Ver atención" : "Registrar atención"}
-        </Link>
+        <span className="flex flex-wrap gap-4 text-sm font-medium">
+          <Link href={`/citas/${citaId}/atencion`} className="underline-offset-4 hover:underline">
+            {tieneAtencion ? "Ver atención" : "Registrar atención"}
+          </Link>
+          <Link href={`/citas/${citaId}/cobro`} className="underline-offset-4 hover:underline">
+            Registrar cobro
+          </Link>
+        </span>
       )}
     </div>
   );
