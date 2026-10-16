@@ -18,8 +18,8 @@ export async function bloquearCita(tx: Tx, id: string) {
  * registrada" y US8 "sin cobros vigentes".
  */
 async function validarReversion(tx: Tx, citaId: string) {
-  void tx;
-  void citaId;
+  const atencion = await tx.atencion.findUnique({ where: { citaId }, select: { id: true } });
+  if (atencion) throw new ErrorDominio("ESTADO_INVALIDO", "La cita tiene una atención registrada");
 }
 
 export async function marcarAsistida(sesion: Sesion, entrada: { id: string }) {

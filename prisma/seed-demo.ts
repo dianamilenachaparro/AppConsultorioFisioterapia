@@ -104,6 +104,52 @@ async function main() {
       });
     }
   }
+  // Historial pasado del primer paciente con el primer profesional (quickstart US4).
+  if ((await prisma.atencion.count()) === 0) {
+    const hoy = hoyBogota();
+    const pasadas: [number, number, "LUMBAR" | "CERVICAL", string][] = [
+      // días atrás, dolor, zona, técnica
+      [42, 8, "LUMBAR", "Terapia manual y calor local"],
+      [28, 6, "LUMBAR", "Movilización lumbar y estiramientos"],
+      [21, 5, "CERVICAL", "Liberación miofascial cervical"],
+      [14, 4, "LUMBAR", "Ejercicios de estabilización"],
+    ];
+    for (const [dias, dolor, zona, tecnica] of pasadas) {
+      const fecha = sumarDias(hoy, -dias);
+      const inicio = instanteBogota(fecha, "07:30");
+      const cita = await prisma.cita.create({
+        data: {
+          pacienteId: pacientes[0],
+          profesionalId: usuarios["1000000002"],
+          consultorioId: consultorios[0].id,
+          inicio,
+          fin: new Date(inicio.getTime() + 30 * 60_000),
+          duracionMin: 30,
+          motivo: zona === "LUMBAR" ? "Dolor de espalda baja" : "Dolor de cuello",
+          zonaCorporal: zona,
+          estado: "ASISTIDA",
+          retroactiva: true,
+          creadoPorId: recepcionista,
+        },
+      });
+      await prisma.atencion.create({
+        data: {
+          citaId: cita.id,
+          pacienteId: cita.pacienteId,
+          profesionalId: cita.profesionalId,
+          fecha: inicio,
+          zonaCorporal: zona,
+          motivo: cita.motivo,
+          tecnica,
+          dolor,
+          notasEvolucion: "Responde bien al tratamiento; continuar plan en casa.",
+          creadoPorId: cita.profesionalId,
+          creadoEn: new Date(inicio.getTime() + 60 * 60_000),
+        },
+      });
+    }
+  }
+
   console.log("Datos demo listos. Usuarios: 1000000001 (Recepción), 1000000002 y 1000000003 (Profesionales), 1000000009 (Dueño). Clave: demo12345");
 }
 

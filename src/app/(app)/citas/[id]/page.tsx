@@ -73,9 +73,16 @@ export default async function DetalleCita({ params }: PageProps<"/citas/[id]">) 
         puedeRevertir={puede(sesion.rol, "citas:revertir_estado")}
       />
 
-      <Link href={`/pacientes/${cita.paciente.id}/historial`} className="text-sm underline-offset-4 hover:underline">
-        Ver historial del paciente
-      </Link>
+      <div className="flex flex-wrap gap-4 text-sm">
+        {puede(sesion.rol, "atenciones:registrar") && cita.estado === "ASISTIDA" && (
+          <Link href={`/citas/${cita.id}/atencion`} className="font-medium underline-offset-4 hover:underline">
+            Atención
+          </Link>
+        )}
+        <Link href={`/pacientes/${cita.paciente.id}/historial`} className="underline-offset-4 hover:underline">
+          Ver historial del paciente
+        </Link>
+      </div>
     </div>
   );
 }
