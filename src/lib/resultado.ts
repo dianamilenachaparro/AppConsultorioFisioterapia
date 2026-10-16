@@ -102,6 +102,7 @@ const RESTRICCIONES: [string, CodigoError][] = [
   ["insumo_stock_no_negativo", "STOCK_INSUFICIENTE"],
   ["fuera_de_ventana", "FUERA_DE_VENTANA"],
   ["marcacion_orden", "ESTADO_INVALIDO"],
+  ["usuario_recepcionista_no_atiende", "VALIDACION"],
 ];
 
 /**
