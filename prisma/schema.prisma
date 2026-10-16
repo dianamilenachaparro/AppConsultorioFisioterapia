@@ -1,0 +1,399 @@
+// Modelo de datos: specs/001-gestion-consultorio/data-model.md
+// Las restricciones que Prisma no puede expresar (EXCLUDE, CHECK, triggers)
+// viven en el SQL manual de cada migración. No borrarlas.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enumeraciones ──────────────────────────────────────────────────────────
+
+enum Rol {
+  DUENO
+  RECEPCIONISTA
+  PROFESIONAL
+}
+
+enum EstadoCita {
+  PROGRAMADA
+  ASISTIDA
+  CANCELADA
+}
+
+enum ZonaCorporal {
+  CERVICAL
+  DORSAL
+  LUMBAR
+  HOMBRO
+  CODO
+  MUNECA_MANO
+  CADERA
+  RODILLA
+  TOBILLO_PIE
+  OTRA
+}
+
+enum MedioPago {
+  EFECTIVO
+  TRANSFERENCIA
+}
+
+enum TipoMovimientoFinanciero {
+  INGRESO
+  EGRESO
+}
+
+enum SubtipoIngreso {
+  TERAPIA
+  VENTA_INSUMOS
+}
+
+enum TipoMovimientoInventario {
+  AJUSTE_INICIAL
+  VENTA
+  REPOSICION
+}
+
+// ─── Usuarios y sesiones ────────────────────────────────────────────────────
+
+model Usuario {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Único; solo dígitos, 5–15 caracteres.
+  cedula              String    @unique
+  nombreCompleto      String    @map("nombre_completo")
+  rol                 Rol
+  /// Asignable a citas si activo AND atiende_pacientes. Nunca true para RECEPCIONISTA (CHECK en SQL).
+  atiendePacientes    Boolean   @default(false) @map("atiende_pacientes")
+  passwordHash        String    @map("password_hash")
+  activo              Boolean   @default(true)
+  intentosFallidos    Int       @default(0) @map("intentos_fallidos") @db.SmallInt
+  bloqueadoHasta      DateTime? @map("bloqueado_hasta") @db.Timestamptz(6)
+  debeCambiarPassword Boolean   @default(true) @map("debe_cambiar_password")
+  creadoEn            DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn       DateTime  @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  sesiones               Sesion[]
+  citasComoProfesional   Cita[]                 @relation("CitaProfesional")
+  citasCreadas           Cita[]                 @relation("CitaCreadaPor")
+  citasActualizadas      Cita[]                 @relation("CitaActualizadaPor")
+  citasCanceladas        Cita[]                 @relation("CitaCanceladaPor")
+  pacientesCreados       Paciente[]             @relation("PacienteCreadoPor")
+  atencionesComoProf     Atencion[]             @relation("AtencionProfesional")
+  atencionesCreadas      Atencion[]             @relation("AtencionCreadaPor")
+  atencionesEditadas     Atencion[]             @relation("AtencionActualizadaPor")
+  notasAclaratorias      NotaAclaratoria[]
+  llegadasMarcadas       Marcacion[]            @relation("MarcacionLlegadaPor")
+  ingresosMarcados       Marcacion[]            @relation("MarcacionIngresoPor")
+  finesMarcados          Marcacion[]            @relation("MarcacionFinPor")
+  movInventarioCreados   MovimientoInventario[] @relation("MovInventarioCreadoPor")
+  movInventarioAnulados  MovimientoInventario[] @relation("MovInventarioAnuladoPor")
+  movFinancierosCreados  MovimientoFinanciero[] @relation("MovFinancieroCreadoPor")
+  movFinancierosAnulados MovimientoFinanciero[] @relation("MovFinancieroAnuladoPor")
+  conexionGoogle         ConexionGoogle?
+  auditoria              RegistroAuditoria[]
+
+  @@map("usuario")
+}
+
+model Sesion {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuarioId       String   @map("usuario_id") @db.Uuid
+  /// SHA-256 del token de la cookie; el token nunca se guarda.
+  tokenHash       String   @unique @map("token_hash")
+  creadaEn        DateTime @default(now()) @map("creada_en") @db.Timestamptz(6)
+  ultimaActividad DateTime @default(now()) @map("ultima_actividad") @db.Timestamptz(6)
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@map("sesion")
+}
+
+// ─── Consultorios y pacientes ───────────────────────────────────────────────
+
+model Consultorio {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre        String   @unique
+  orden         Int      @default(0) @db.SmallInt
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  citas Cita[]
+
+  @@map("consultorio")
+}
+
+model Paciente {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Único; alfanumérico 4–20, normalizado sin puntos, guiones ni espacios.
+  documento       String   @unique
+  nombreCompleto  String   @map("nombre_completo")
+  telefono        String
+  fechaNacimiento DateTime @map("fecha_nacimiento") @db.Date
+  direccion       String
+  departamento    String
+  ciudad          String
+  barrio          String
+  creadoPorId     String   @map("creado_por") @db.Uuid
+  creadoEn        DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn   DateTime @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  creadoPor  Usuario    @relation("PacienteCreadoPor", fields: [creadoPorId], references: [id])
+  citas      Cita[]
+  atenciones Atencion[]
+
+  @@index([nombreCompleto(ops: raw("gin_trgm_ops"))], type: Gin, map: "paciente_nombre_trgm_idx")
+  @@map("paciente")
+}
+
+// ─── Citas ──────────────────────────────────────────────────────────────────
+
+model Cita {
+  id                     String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pacienteId             String       @map("paciente_id") @db.Uuid
+  profesionalId          String       @map("profesional_id") @db.Uuid
+  consultorioId          String       @map("consultorio_id") @db.Uuid
+  /// Minutos :00 o :30 hora Bogotá; ≥ 07:30.
+  inicio                 DateTime     @db.Timestamptz(6)
+  /// Múltiplo de 30, 30–570.
+  duracionMin            Int          @map("duracion_min") @db.SmallInt
+  /// = inicio + duracion_min; ≤ 17:00 del mismo día (Bogotá).
+  fin                    DateTime     @db.Timestamptz(6)
+  motivo                 String
+  zonaCorporal           ZonaCorporal @map("zona_corporal")
+  estado                 EstadoCita   @default(PROGRAMADA)
+  retroactiva            Boolean      @default(false)
+  observacionCancelacion String?      @map("observacion_cancelacion")
+  canceladaPorId         String?      @map("cancelada_por") @db.Uuid
+  canceladaEn            DateTime?    @map("cancelada_en") @db.Timestamptz(6)
+  creadoPorId            String       @map("creado_por") @db.Uuid
+  creadoEn               DateTime     @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoPorId       String?      @map("actualizado_por") @db.Uuid
+  actualizadoEn          DateTime     @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  paciente       Paciente               @relation(fields: [pacienteId], references: [id])
+  profesional    Usuario                @relation("CitaProfesional", fields: [profesionalId], references: [id])
+  consultorio    Consultorio            @relation(fields: [consultorioId], references: [id])
+  creadoPor      Usuario                @relation("CitaCreadaPor", fields: [creadoPorId], references: [id])
+  actualizadoPor Usuario?               @relation("CitaActualizadaPor", fields: [actualizadoPorId], references: [id])
+  canceladaPor   Usuario?               @relation("CitaCanceladaPor", fields: [canceladaPorId], references: [id])
+  atencion       Atencion?
+  marcacion      Marcacion?
+  cobros         MovimientoFinanciero[]
+
+  @@index([consultorioId, inicio])
+  @@index([profesionalId, inicio])
+  @@index([pacienteId, inicio])
+  @@index([estado, inicio])
+  @@map("cita")
+}
+
+// ─── Marcación de tiempos ───────────────────────────────────────────────────
+
+/// Llegada → ingreso → fin, en ese orden (CHECK en SQL). Solo el Dueño corrige (FR-030).
+model Marcacion {
+  citaId       String    @id @map("cita_id") @db.Uuid
+  llegadaEn    DateTime? @map("llegada_en") @db.Timestamptz(6)
+  llegadaPorId String?   @map("llegada_por") @db.Uuid
+  ingresoEn    DateTime? @map("ingreso_en") @db.Timestamptz(6)
+  ingresoPorId String?   @map("ingreso_por") @db.Uuid
+  finEn        DateTime? @map("fin_en") @db.Timestamptz(6)
+  finPorId     String?   @map("fin_por") @db.Uuid
+
+  cita       Cita     @relation(fields: [citaId], references: [id])
+  llegadaPor Usuario? @relation("MarcacionLlegadaPor", fields: [llegadaPorId], references: [id])
+  ingresoPor Usuario? @relation("MarcacionIngresoPor", fields: [ingresoPorId], references: [id])
+  finPor     Usuario? @relation("MarcacionFinPor", fields: [finPorId], references: [id])
+
+  @@map("marcacion")
+}
+
+// ─── Atenciones e historial ─────────────────────────────────────────────────
+
+/// Editable solo el mismo día de creación (Bogotá) y nunca borrable: triggers en SQL (FR-025a).
+model Atencion {
+  id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Una atención por cita; la cita debe estar ASISTIDA.
+  citaId           String       @unique @map("cita_id") @db.Uuid
+  pacienteId       String       @map("paciente_id") @db.Uuid
+  profesionalId    String       @map("profesional_id") @db.Uuid
+  /// = cita.inicio
+  fecha            DateTime     @db.Timestamptz(6)
+  zonaCorporal     ZonaCorporal @map("zona_corporal")
+  motivo           String
+  tecnica          String
+  /// 0–10 (CHECK en SQL).
+  dolor            Int          @db.SmallInt
+  notasEvolucion   String       @map("notas_evolucion")
+  creadoPorId      String       @map("creado_por") @db.Uuid
+  creadoEn         DateTime     @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoPorId String?      @map("actualizado_por") @db.Uuid
+  actualizadoEn    DateTime?    @map("actualizado_en") @db.Timestamptz(6)
+
+  cita              Cita              @relation(fields: [citaId], references: [id])
+  paciente          Paciente          @relation(fields: [pacienteId], references: [id])
+  profesional       Usuario           @relation("AtencionProfesional", fields: [profesionalId], references: [id])
+  creadoPor         Usuario           @relation("AtencionCreadaPor", fields: [creadoPorId], references: [id])
+  actualizadoPor    Usuario?          @relation("AtencionActualizadaPor", fields: [actualizadoPorId], references: [id])
+  notasAclaratorias NotaAclaratoria[]
+
+  @@index([pacienteId, fecha])
+  @@map("atencion")
+}
+
+/// Solo inserción (trigger en SQL).
+model NotaAclaratoria {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  atencionId  String   @map("atencion_id") @db.Uuid
+  /// 5–2000 caracteres.
+  texto       String
+  creadoPorId String   @map("creado_por") @db.Uuid
+  creadoEn    DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  atencion  Atencion @relation(fields: [atencionId], references: [id])
+  creadoPor Usuario  @relation(fields: [creadoPorId], references: [id])
+
+  @@index([atencionId])
+  @@map("nota_aclaratoria")
+}
+
+// ─── Inventario y finanzas ──────────────────────────────────────────────────
+// Valores en pesos colombianos enteros. CHECKs y unicidad sin mayúsculas en SQL.
+
+model Insumo {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Único sin distinguir mayúsculas (índice sobre lower(nombre) en SQL).
+  nombre        String
+  /// ≥ 0 (COP)
+  costo         Int
+  /// ≥ 0 (COP)
+  precioVenta   Int      @map("precio_venta")
+  /// ≥ 0; solo cambia por movimientos.
+  stock         Int      @default(0)
+  /// ≥ 0
+  stockMinimo   Int      @default(0) @map("stock_minimo")
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  movimientos MovimientoInventario[]
+
+  @@map("insumo")
+}
+
+model MovimientoInventario {
+  id              String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  insumoId        String                   @map("insumo_id") @db.Uuid
+  tipo            TipoMovimientoInventario
+  /// > 0
+  cantidad        Int
+  /// VENTA: precio de venta usado; REPOSICION: costo unitario pagado; AJUSTE_INICIAL: costo.
+  valorUnitario   Int                      @map("valor_unitario")
+  /// Día Bogotá.
+  fecha           DateTime                 @db.Date
+  anulado         Boolean                  @default(false)
+  anuladoPorId    String?                  @map("anulado_por") @db.Uuid
+  anuladoEn       DateTime?                @map("anulado_en") @db.Timestamptz(6)
+  motivoAnulacion String?                  @map("motivo_anulacion")
+  creadoPorId     String                   @map("creado_por") @db.Uuid
+  creadoEn        DateTime                 @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  insumo     Insumo                @relation(fields: [insumoId], references: [id])
+  anuladoPor Usuario?              @relation("MovInventarioAnuladoPor", fields: [anuladoPorId], references: [id])
+  creadoPor  Usuario               @relation("MovInventarioCreadoPor", fields: [creadoPorId], references: [id])
+  financiero MovimientoFinanciero?
+
+  @@index([insumoId, creadoEn])
+  @@map("movimiento_inventario")
+}
+
+model CategoriaEgreso {
+  id     String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// ARRIENDO, SERVICIOS_PUBLICOS, COMPRA_INSUMOS, NOMINA, MANTENIMIENTO, OTROS
+  clave  String  @unique
+  nombre String
+  activo Boolean @default(true)
+
+  movimientos MovimientoFinanciero[]
+
+  @@map("categoria_egreso")
+}
+
+/// Coherencia tipo/subtipo/categoría y anulación completa: CHECKs en SQL.
+model MovimientoFinanciero {
+  id                     String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tipo                   TipoMovimientoFinanciero
+  /// Obligatorio si INGRESO, nulo si EGRESO.
+  subtipoIngreso         SubtipoIngreso?          @map("subtipo_ingreso")
+  /// Obligatorio si EGRESO, nulo si INGRESO.
+  categoriaEgresoId      String?                  @map("categoria_egreso_id") @db.Uuid
+  /// Día Bogotá.
+  fecha                  DateTime                 @db.Date
+  /// > 0 (COP)
+  valor                  Int
+  medioPago              MedioPago                @map("medio_pago")
+  descripcion            String
+  /// Obligatorio si subtipo TERAPIA; una cita admite varios cobros (abonos).
+  citaId                 String?                  @map("cita_id") @db.Uuid
+  /// Obligatorio si VENTA_INSUMOS o egreso de reposición.
+  movimientoInventarioId String?                  @unique @map("movimiento_inventario_id") @db.Uuid
+  anulado                Boolean                  @default(false)
+  anuladoPorId           String?                  @map("anulado_por") @db.Uuid
+  anuladoEn              DateTime?                @map("anulado_en") @db.Timestamptz(6)
+  motivoAnulacion        String?                  @map("motivo_anulacion")
+  creadoPorId            String                   @map("creado_por") @db.Uuid
+  creadoEn               DateTime                 @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  categoriaEgreso      CategoriaEgreso?      @relation(fields: [categoriaEgresoId], references: [id])
+  cita                 Cita?                 @relation(fields: [citaId], references: [id])
+  movimientoInventario MovimientoInventario? @relation(fields: [movimientoInventarioId], references: [id])
+  anuladoPor           Usuario?              @relation("MovFinancieroAnuladoPor", fields: [anuladoPorId], references: [id])
+  creadoPor            Usuario               @relation("MovFinancieroCreadoPor", fields: [creadoPorId], references: [id])
+
+  @@index([fecha])
+  @@index([tipo, fecha])
+  @@index([medioPago, fecha])
+  @@index([citaId])
+  @@index([creadoPorId, creadoEn])
+  @@map("movimiento_financiero")
+}
+
+/// Cuenta de Google del Dueño para exportar a Sheets (contracts/exportacion-google-sheets.md).
+model ConexionGoogle {
+  usuarioId           String   @id @map("usuario_id") @db.Uuid
+  /// Para mostrar "Conectado como …".
+  emailGoogle         String   @map("email_google")
+  /// AES-256-GCM con GOOGLE_TOKEN_KEY; nunca se guarda en claro.
+  refreshTokenCifrado String   @map("refresh_token_cifrado")
+  conectadoEn         DateTime @default(now()) @map("conectado_en") @db.Timestamptz(6)
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@map("conexion_google")
+}
+
+// ─── Auditoría (append-only por trigger) ────────────────────────────────────
+
+model RegistroAuditoria {
+  id        BigInt   @id @default(autoincrement())
+  usuarioId String   @map("usuario_id") @db.Uuid
+  accion    String
+  entidad   String
+  entidadId String   @map("entidad_id")
+  antes     Json?
+  despues   Json?
+  motivo    String?
+  creadoEn  DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@index([entidad, entidadId])
+  @@index([creadoEn])
+  @@map("registro_auditoria")
+}

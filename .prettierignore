@@ -1,0 +1,10 @@
+node_modules/
+.next/
+coverage/
+build/
+dist/
+pnpm-lock.yaml
+src/generated/
+prisma/migrations/
+specs/
+.specify/

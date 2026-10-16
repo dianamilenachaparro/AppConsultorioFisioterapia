@@ -1,0 +1,59 @@
+# Respaldo lógico diario cifrado (FR-044a, research R-16). Ver docs/respaldos.md.
+# Si cualquier paso falla, el job falla y GitHub notifica a quien administra el repositorio.
+name: respaldo-diario
+
+on:
+  schedule:
+    - cron: "0 8 * * *" # 03:00 hora de Bogotá (UTC-5, sin horario de verano)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: respaldo-diario
+  cancel-in-progress: false
+
+jobs:
+  respaldo:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
+      AGE_PUBLIC_KEY: ${{ secrets.AGE_PUBLIC_KEY }}
+      S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
+      S3_BUCKET: ${{ secrets.S3_BUCKET }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+    steps:
+      - name: Verificar secretos
+        run: |
+          set -euo pipefail
+          for v in DIRECT_URL AGE_PUBLIC_KEY S3_ENDPOINT S3_BUCKET AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY; do
+            if [ -z "${!v:-}" ]; then echo "Falta el secreto $v"; exit 1; fi
+          done
+
+      - name: Instalar postgresql-client-16 y age
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-16 age > /dev/null
+          pg_dump --version
+          age --version
+
+      - name: Volcar, cifrar y subir
+        run: |
+          set -euo pipefail
+          umask 077
+          fecha="$(TZ=America/Bogota date +%F)"
+          archivo="consultorio-${fecha}.dump.age"
+          # El volcado nunca toca el disco sin cifrar ni se imprime en el log.
+          pg_dump --format=custom --no-owner --no-privileges "$DIRECT_URL" \
+            | age -r "$AGE_PUBLIC_KEY" -o "$archivo"
+          tamano="$(stat -c %s "$archivo")"
+          if [ "$tamano" -lt 1024 ]; then echo "El respaldo cifrado es sospechosamente pequeño ($tamano bytes)"; exit 1; fi
+          aws s3 cp "$archivo" "s3://${S3_BUCKET}/respaldos/${archivo}" \
+            --endpoint-url "$S3_ENDPOINT" --only-show-errors
+          echo "Respaldo ${archivo} subido (${tamano} bytes)."
+          rm -f "$archivo"
