@@ -29,7 +29,7 @@ export default async function HistorialPaciente({ params }: PageProps<"/paciente
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
       <div>
-        <h1 className="text-xl font-semibold">Historial de {paciente.nombreCompleto}</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Historial de {paciente.nombreCompleto}</h1>
         <p className="text-sm text-muted-foreground">
           Documento {paciente.documento} · Tel. {paciente.telefono} · Nacimiento{" "}
           {formatearFecha(fechaDeColumnaDate(paciente.fechaNacimiento))}

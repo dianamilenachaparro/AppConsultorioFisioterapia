@@ -46,9 +46,9 @@ export default async function Citas({ searchParams }: PageProps<"/citas">) {
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold">Citas</h1>
-      <form className="grid gap-3 rounded-lg border bg-background p-3 sm:grid-cols-3 lg:grid-cols-6 lg:items-end">
+    <div className="flex flex-col gap-5">
+      <h1 className="text-2xl font-bold tracking-tight">Citas</h1>
+      <form className="superficie grid gap-3 p-4 sm:grid-cols-3 sm:p-5 lg:grid-cols-6 lg:items-end">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="desde">Desde</Label>
           <Input id="desde" name="desde" type="date" defaultValue={filtro.desde} />
@@ -95,33 +95,46 @@ export default async function Citas({ searchParams }: PageProps<"/citas">) {
         <Button type="submit">Filtrar</Button>
       </form>
 
-      <div className="flex flex-wrap gap-2 text-sm">
-        <span className="rounded-md bg-background px-2 py-1 font-medium">Total: {total}</span>
-        <span className="rounded-md bg-background px-2 py-1">Programadas: {conteos.PROGRAMADA}</span>
-        <span className="rounded-md bg-background px-2 py-1">Asistidas: {conteos.ASISTIDA}</span>
-        <span className="rounded-md bg-background px-2 py-1">Canceladas: {conteos.CANCELADA}</span>
-      </div>
-
-      <ul className="flex flex-col divide-y rounded-lg border bg-background">
-        {filas.map((c) => (
-          <li key={c.id}>
-            <Link href={`/citas/${c.id}`} className="flex flex-col gap-1 px-4 py-3 hover:bg-accent">
-              <span className="flex flex-wrap items-center gap-2">
-                <span className="font-medium">
+      <section aria-label="Resultados" className="superficie overflow-hidden">
+        <div className="flex flex-wrap items-center gap-2 px-5 pt-5 pb-3 text-sm sm:px-7 sm:pt-6">
+          <span className="mr-2 text-lg font-bold">Total: {total}</span>
+          <span className="rounded-full bg-info-suave px-3 py-1 font-semibold text-info">Programadas: {conteos.PROGRAMADA}</span>
+          <span className="rounded-full bg-exito-suave px-3 py-1 font-semibold text-exito">Asistidas: {conteos.ASISTIDA}</span>
+          <span className="rounded-full bg-peligro-suave px-3 py-1 font-semibold text-peligro">Canceladas: {conteos.CANCELADA}</span>
+        </div>
+        <div
+          aria-hidden
+          className="mx-5 hidden grid-cols-[14rem_minmax(0,1fr)_minmax(0,1.3fr)_7.5rem] gap-x-4 border-b py-2.5 text-xs font-medium text-muted-foreground sm:mx-7 md:grid"
+        >
+          <span>Fecha y hora</span>
+          <span>Paciente</span>
+          <span>Profesional y consultorio</span>
+          <span className="text-right">Estado</span>
+        </div>
+        <ul className="flex flex-col px-2 pb-2 sm:px-4">
+          {filas.map((c) => (
+            <li key={c.id} className="not-last:border-b">
+              <Link
+                href={`/citas/${c.id}`}
+                className="flex flex-col gap-1 rounded-md px-3 py-3.5 text-sm transition-colors duration-150 hover:bg-muted/70 md:grid md:grid-cols-[14rem_minmax(0,1fr)_minmax(0,1.3fr)_7.5rem] md:items-center md:gap-x-4"
+              >
+                <span className="font-semibold tabular-nums">
                   {formatearFecha(c.inicio)} · {formatearHora(c.inicio)}–{formatearHora(c.fin)}
                 </span>
-                <EtiquetaEstado estado={c.estado} />
-                {c.retroactiva && <EtiquetaRetroactiva />}
-              </span>
-              <span className="text-sm">{c.paciente.nombreCompleto}</span>
-              <span className="text-sm text-muted-foreground">
-                {c.profesional.nombreCompleto} · {c.consultorio.nombre} · {NOMBRE_ZONA[c.zonaCorporal]}
-              </span>
-            </Link>
-          </li>
-        ))}
-        {filas.length === 0 && <li className="px-4 py-6 text-center text-sm text-muted-foreground">Sin citas</li>}
-      </ul>
+                <span className="font-semibold md:truncate">{c.paciente.nombreCompleto}</span>
+                <span className="text-muted-foreground md:truncate">
+                  {c.profesional.nombreCompleto} · {c.consultorio.nombre} · {NOMBRE_ZONA[c.zonaCorporal]}
+                </span>
+                <span className="flex flex-wrap gap-1 md:justify-end">
+                  <EtiquetaEstado estado={c.estado} />
+                  {c.retroactiva && <EtiquetaRetroactiva />}
+                </span>
+              </Link>
+            </li>
+          ))}
+          {filas.length === 0 && <li className="px-4 py-8 text-center text-sm text-muted-foreground">Sin citas</li>}
+        </ul>
+      </section>
 
       {paginas > 1 && (
         <nav className="flex items-center justify-center gap-2" aria-label="Paginación">

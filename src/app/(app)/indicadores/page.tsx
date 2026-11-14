@@ -1,4 +1,13 @@
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  AlarmClockIcon,
+  CalendarCheckIcon,
+  CalendarClockIcon,
+  CalendarXIcon,
+  CircleCheckIcon,
+  HourglassIcon,
+  TimerIcon,
+  type LucideIcon,
+} from "lucide-react";
 import { puede } from "@/lib/permisos";
 import { formatearFecha, hoyBogota } from "@/lib/tiempo";
 import { fechaISO, uuid } from "@/lib/validacion/comunes";
@@ -11,32 +20,59 @@ import { FiltrosIndicadores } from "./filtros";
 
 const decimal = new Intl.NumberFormat("es-CO", { maximumFractionDigits: 1 });
 
+const basado = (n: number) => (n === 1 ? "1 cita" : `${n} citas`);
+
+/** Una métrica dentro de la tarjeta ancha: ícono de color, cifra grande y cuántas citas la sustentan. */
 function Dato({
   titulo,
   valor,
   unidad,
   nota,
+  muestras,
+  icono: Icono,
+  color,
 }: {
   titulo: string;
   valor: number | null;
   unidad?: string;
   nota: string;
+  muestras: number;
+  icono: LucideIcon;
+  color: string;
 }) {
   return (
-    <Card>
-      <CardContent className="flex flex-col gap-1">
-        <p className="text-sm text-muted-foreground">{titulo}</p>
-        <p className="text-3xl font-semibold tabular-nums">
+    <div className="flex flex-col gap-3 px-5 py-5 sm:px-6 lg:py-6">
+      <p className="flex items-center gap-3 text-sm font-semibold">
+        <span
+          aria-hidden
+          className="grid size-9 shrink-0 place-items-center rounded-full text-white"
+          style={{ background: color }}
+        >
+          <Icono className="size-[1.125rem]" strokeWidth={2.2} />
+        </span>
+        {titulo}
+      </p>
+      <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        <span className="cifra text-[2rem] leading-none">
           {valor === null ? "—" : decimal.format(valor)}
-          {valor !== null && unidad && <span className="ml-1 text-base font-normal text-muted-foreground">{unidad}</span>}
-        </p>
-        <p className="text-xs text-muted-foreground">{nota}</p>
-      </CardContent>
-    </Card>
+          {valor !== null && unidad && (
+            <span className="ml-1 text-lg font-semibold text-muted-foreground">{unidad}</span>
+          )}
+        </span>
+        <span className="rounded-full bg-muted px-2 py-0.5 text-[0.72rem] font-semibold text-muted-foreground tabular-nums">
+          {basado(muestras)}
+        </span>
+      </p>
+      <p className="text-xs text-muted-foreground">{nota}</p>
+    </div>
   );
 }
 
-const basado = (n: number) => (n === 1 ? "Basado en 1 cita" : `Basado en ${n} citas`);
+const CONTEOS: [string, "programadas" | "asistidas" | "canceladas", LucideIcon, string][] = [
+  ["Programadas", "programadas", CalendarClockIcon, "bg-info-suave text-info"],
+  ["Asistidas", "asistidas", CalendarCheckIcon, "bg-exito-suave text-exito"],
+  ["Canceladas", "canceladas", CalendarXIcon, "bg-peligro-suave text-peligro"],
+];
 
 export default async function Indicadores({ searchParams }: PageProps<"/indicadores">) {
   const sesion = await paginaProtegida(["indicadores:ver_todos", "indicadores:ver_propios"]);
@@ -56,9 +92,9 @@ export default async function Indicadores({ searchParams }: PageProps<"/indicado
   const hasta = new Date(r.rango.hasta.getTime() - 1);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
       <div>
-        <h1 className="text-xl font-semibold">{verTodos ? "Indicadores" : "Mis indicadores"}</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{verTodos ? "Indicadores" : "Mis indicadores"}</h1>
         <p className="text-sm text-muted-foreground">
           {formatearFecha(r.rango.desde)}
           {periodo !== "DIA" && ` – ${formatearFecha(hasta)}`}
@@ -69,43 +105,60 @@ export default async function Indicadores({ searchParams }: PageProps<"/indicado
         profesionales={profesionales?.map((p) => ({ id: p.id, nombre: p.nombreCompleto }))}
         consultorios={consultorios}
       />
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Dato titulo="Espera promedio" valor={r.esperaPromedioMin} unidad="min" nota={`Llegada → ingreso. ${basado(r.muestras.espera)}`} />
+      <section
+        aria-label="Tiempos de atención"
+        className="superficie grid sm:grid-cols-2 lg:grid-cols-4 lg:py-1 [&>*+*]:border-t sm:[&>*:nth-child(2)]:border-t-0 sm:[&>*:nth-child(even)]:border-l lg:[&>*+*]:border-t-0 lg:[&>*+*]:border-l"
+      >
+        <Dato
+          titulo="Espera promedio"
+          valor={r.esperaPromedioMin}
+          unidad="min"
+          nota="De la llegada al ingreso a terapia."
+          muestras={r.muestras.espera}
+          icono={HourglassIcon}
+          color="var(--serie-2)"
+        />
         <Dato
           titulo="Duración real promedio"
           valor={r.duracionRealPromedioMin}
           unidad="min"
-          nota={`Ingreso → fin. ${basado(r.muestras.duracion)}`}
+          nota="Del ingreso al fin de la terapia."
+          muestras={r.muestras.duracion}
+          icono={TimerIcon}
+          color="var(--serie-3)"
         />
         <Dato
           titulo="Retraso promedio"
           valor={r.retrasoPromedioMin}
           unidad="min"
-          nota={`Ingreso vs. hora programada. ${basado(r.muestras.puntualidad)}`}
+          nota="Ingreso frente a la hora programada."
+          muestras={r.muestras.puntualidad}
+          icono={AlarmClockIcon}
+          color="var(--serie-8)"
         />
         <Dato
           titulo="Iniciadas a tiempo"
           valor={r.porcentajeATiempo}
           unidad="%"
-          nota={`Hasta ${TOLERANCIA_A_TIEMPO_MIN} min de retraso. ${basado(r.muestras.puntualidad)}`}
+          nota={`Hasta ${TOLERANCIA_A_TIEMPO_MIN} min de retraso.`}
+          muestras={r.muestras.puntualidad}
+          icono={CircleCheckIcon}
+          color="var(--serie-1)"
         />
-      </div>
-      <Card>
-        <CardContent className="grid grid-cols-3 gap-2 text-center">
-          {(
-            [
-              ["Programadas", r.conteos.programadas],
-              ["Asistidas", r.conteos.asistidas],
-              ["Canceladas", r.conteos.canceladas],
-            ] as const
-          ).map(([nombre, n]) => (
-            <div key={nombre}>
-              <p className="text-2xl font-semibold tabular-nums">{n}</p>
+      </section>
+      <section aria-label="Citas del periodo" className="grid gap-4 sm:grid-cols-3">
+        {CONTEOS.map(([nombre, clave, Icono, tono]) => (
+          <div key={clave} className="superficie flex items-center gap-4 p-5">
+            <span aria-hidden className={`grid size-11 shrink-0 place-items-center rounded-full ${tono}`}>
+              <Icono className="size-5" strokeWidth={2.2} />
+            </span>
+            <div>
+              <p className="cifra text-2xl leading-tight">{r.conteos[clave]}</p>
               <p className="text-sm text-muted-foreground">{nombre}</p>
             </div>
-          ))}
-        </CardContent>
-      </Card>
+          </div>
+        ))}
+      </section>
     </div>
   );
 }

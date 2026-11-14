@@ -27,7 +27,7 @@ export default async function DetalleUsuario({ params }: PageProps<"/admin/usuar
         ← Usuarios
       </Link>
       <div className="flex flex-wrap items-center gap-2">
-        <h1 className="text-xl font-semibold">{usuario.nombreCompleto}</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{usuario.nombreCompleto}</h1>
         {!usuario.activo && <Badge variant="destructive">Inactivo</Badge>}
         {bloqueado && <Badge variant="destructive">Bloqueado hasta {formatearFechaHora(usuario.bloqueadoHasta!)}</Badge>}
       </div>

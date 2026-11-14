@@ -48,7 +48,7 @@ export default async function Auditoria({ searchParams }: PageProps<"/admin/audi
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-xl font-semibold">Auditoría</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Auditoría</h1>
         <p className="text-sm text-muted-foreground">Registro de solo lectura de quién hizo qué y cuándo.</p>
       </div>
       <form className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-end">
@@ -99,7 +99,7 @@ export default async function Auditoria({ searchParams }: PageProps<"/admin/audi
       </form>
 
       <p className="text-sm text-muted-foreground">{r.total} registro(s)</p>
-      <ul className="flex flex-col divide-y rounded-lg border bg-background">
+      <ul className="flex flex-col divide-y superficie">
         {r.filas.map((f) => (
           <li key={f.id} className="px-4 py-3">
             <details>

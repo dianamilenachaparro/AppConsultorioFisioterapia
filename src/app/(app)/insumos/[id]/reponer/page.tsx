@@ -23,7 +23,7 @@ export default async function ReponerInsumo({ params }: PageProps<"/insumos/[id]
         ← {insumo.nombre}
       </Link>
       <div>
-        <h1 className="text-xl font-semibold">Reponer {insumo.nombre}</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Reponer {insumo.nombre}</h1>
         <p className="text-sm text-muted-foreground">Stock actual: {insumo.stock}. Se registrará como egreso “Compra de insumos”.</p>
       </div>
       <Card>

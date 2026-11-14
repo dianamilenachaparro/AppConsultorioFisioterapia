@@ -20,7 +20,7 @@ export function FormularioLogin({ siguiente }: { siguiente?: string }) {
           inputMode="numeric"
           autoComplete="username"
           required
-          className="h-11 text-base"
+          className="h-12 text-base"
         />
       </div>
       <div className="flex flex-col gap-2">
@@ -31,7 +31,7 @@ export function FormularioLogin({ siguiente }: { siguiente?: string }) {
           type="password"
           autoComplete="current-password"
           required
-          className="h-11 text-base"
+          className="h-12 text-base"
         />
       </div>
       {estado && (
@@ -39,7 +39,7 @@ export function FormularioLogin({ siguiente }: { siguiente?: string }) {
           {estado.mensaje}
         </p>
       )}
-      <Button type="submit" size="lg" className="h-11" disabled={pendiente}>
+      <Button type="submit" size="lg" className="mt-2 h-12 rounded-md text-base" disabled={pendiente}>
         {pendiente ? "Ingresando…" : "Ingresar"}
       </Button>
     </form>

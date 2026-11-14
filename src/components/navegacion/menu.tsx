@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { puede, puedeAlguna, type Accion, type Rol } from "@/lib/permisos";
+import { EnlaceMenu } from "./enlace-menu";
 
 type Item = { href: string; texto: string; visible: (rol: Rol, atiende: boolean) => boolean };
 
@@ -31,18 +31,23 @@ export function itemsMenu(rol: Rol, atiende: boolean) {
   return ITEMS.filter((i) => i.visible(rol, atiende));
 }
 
-export function MenuEnlaces({ rol, atiende, className }: { rol: Rol; atiende: boolean; className?: string }) {
+export function MenuEnlaces({
+  rol,
+  atiende,
+  enHoja,
+  className,
+}: {
+  rol: Rol;
+  atiende: boolean;
+  enHoja?: boolean;
+  className?: string;
+}) {
   return (
     <nav aria-label="Menú principal" className={className}>
-      <ul className="flex flex-col gap-1 lg:flex-row lg:flex-wrap lg:gap-2">
+      <ul className="flex flex-col gap-1.5">
         {itemsMenu(rol, atiende).map((i) => (
           <li key={i.href}>
-            <Link
-              href={i.href}
-              className="block rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
-            >
-              {i.texto}
-            </Link>
+            <EnlaceMenu href={i.href} texto={i.texto} enHoja={enHoja} />
           </li>
         ))}
       </ul>
