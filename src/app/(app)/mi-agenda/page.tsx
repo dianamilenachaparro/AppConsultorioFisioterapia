@@ -17,16 +17,16 @@ export default async function MiAgenda({ searchParams }: PageProps<"/mi-agenda">
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-xl font-semibold">Mi agenda</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Mi agenda</h1>
         <p className="text-sm text-muted-foreground first-letter:uppercase">{formatearFechaLarga(fecha)}</p>
       </div>
       <FiltroAgenda fecha={fecha} hoy={hoy} />
-      <ul className="flex flex-col divide-y rounded-lg border bg-background">
+      <ul className="flex flex-col divide-y superficie">
         {citas.map((c) => (
           <li key={c.id}>
             <Link href={`/citas/${c.id}`} className="flex flex-col gap-1 px-4 py-3 hover:bg-accent">
               <span className="flex flex-wrap items-center gap-2">
-                <span className="font-mono font-medium tabular-nums">
+                <span className="cifra">
                   {formatearHora(c.inicio)}–{formatearHora(c.fin)}
                 </span>
                 <EtiquetaEstado estado={c.estado} />

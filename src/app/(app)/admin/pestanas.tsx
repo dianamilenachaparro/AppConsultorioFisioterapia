@@ -13,7 +13,7 @@ const PESTANAS = [
 export function PestanasAdmin() {
   const ruta = usePathname();
   return (
-    <nav aria-label="Administración" className="flex gap-1 overflow-x-auto border-b">
+    <nav aria-label="Administración" className="flex max-w-full gap-1 self-start overflow-x-auto rounded-full bg-card p-1 shadow-card">
       {PESTANAS.map((p) => {
         const activa = ruta.startsWith(p.href);
         return (
@@ -22,8 +22,8 @@ export function PestanasAdmin() {
             href={p.href}
             aria-current={activa ? "page" : undefined}
             className={cn(
-              "-mb-px border-b-2 px-3 py-2 text-sm font-medium whitespace-nowrap",
-              activa ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
+              "rounded-full px-4 py-2 text-sm font-semibold whitespace-nowrap transition-colors duration-200 outline-none focus-visible:ring-3 focus-visible:ring-ring/40",
+              activa ? "bg-primary text-primary-foreground shadow-activo" : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
             )}
           >
             {p.texto}

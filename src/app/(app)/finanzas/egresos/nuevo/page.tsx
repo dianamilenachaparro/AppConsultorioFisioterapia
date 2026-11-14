@@ -13,7 +13,7 @@ export default async function NuevoEgreso() {
       <Link href="/finanzas" className="text-sm underline-offset-4 hover:underline">
         ← Finanzas
       </Link>
-      <h1 className="text-xl font-semibold">Registrar egreso</h1>
+      <h1 className="text-2xl font-bold tracking-tight">Registrar egreso</h1>
       <Card>
         <CardContent>
           <FormularioEgreso categorias={categorias} hoy={hoyBogota()} />

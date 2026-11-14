@@ -10,7 +10,7 @@ export default async function VentaInsumo({ searchParams }: PageProps<"/insumos/
 
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-4">
-      <h1 className="text-xl font-semibold">Vender insumo</h1>
+      <h1 className="text-2xl font-bold tracking-tight">Vender insumo</h1>
       <Card>
         <CardContent>
           {disponibles.length === 0 ? (

@@ -25,7 +25,7 @@ export default async function DetallePaciente({ params }: PageProps<"/pacientes/
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-semibold">{paciente.nombreCompleto}</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{paciente.nombreCompleto}</h1>
         <Button asChild variant="outline">
           <Link href={`/pacientes/${id}/historial`}>Ver historial</Link>
         </Button>

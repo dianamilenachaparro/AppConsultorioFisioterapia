@@ -25,7 +25,7 @@ export default async function Agenda({ searchParams }: PageProps<"/agenda">) {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-xl font-semibold">Agenda</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Agenda</h1>
         <p className="text-sm text-muted-foreground first-letter:uppercase">
           {formatearFechaLarga(fecha)} · {consultorio.nombre} · {libres} de 19 bloques disponibles
         </p>

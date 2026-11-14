@@ -29,7 +29,7 @@ export default async function CobroCita({ params }: PageProps<"/citas/[id]/cobro
         ← Volver a la cita
       </Link>
       <div>
-        <h1 className="text-xl font-semibold">Registrar cobro</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Registrar cobro</h1>
         <p className="text-sm text-muted-foreground first-letter:uppercase">
           {cita.paciente.nombreCompleto} · {formatearFechaLarga(fechaBogota(cita.inicio))} · {formatearHora(cita.inicio)}
         </p>

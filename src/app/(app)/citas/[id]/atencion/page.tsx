@@ -25,7 +25,7 @@ export default async function AtencionCita({ params }: PageProps<"/citas/[id]/at
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
       <div>
-        <h1 className="text-xl font-semibold">Atención</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Atención</h1>
         <p className="text-sm text-muted-foreground first-letter:uppercase">
           {cita.paciente.nombreCompleto} · {formatearFechaLarga(fechaBogota(cita.inicio))} ·{" "}
           {formatearHora(cita.inicio)}

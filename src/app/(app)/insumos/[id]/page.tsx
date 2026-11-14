@@ -35,7 +35,7 @@ export default async function DetalleInsumo({ params }: PageProps<"/insumos/[id]
         ← Insumos
       </Link>
       <div className="flex flex-wrap items-center gap-2">
-        <h1 className="text-xl font-semibold">{insumo.nombre}</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{insumo.nombre}</h1>
         {insumo.bajoMinimo && insumo.activo && <EtiquetaStockBajo />}
         {!insumo.activo && <Badge variant="secondary">Inactivo</Badge>}
       </div>
@@ -65,7 +65,7 @@ export default async function DetalleInsumo({ params }: PageProps<"/insumos/[id]
         <h2 id="titulo-movimientos" className="font-medium">
           Movimientos
         </h2>
-        <ul className="flex flex-col divide-y rounded-lg border bg-background">
+        <ul className="flex flex-col divide-y superficie">
           {movimientos.map((m) => (
             <li key={m.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 text-sm">
               <span className="tabular-nums text-muted-foreground">{formatearFecha(fechaDeColumnaDate(m.fecha))}</span>

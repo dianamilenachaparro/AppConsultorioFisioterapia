@@ -13,12 +13,12 @@ export default async function Usuarios() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-semibold">Usuarios</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Usuarios</h1>
         <Button asChild>
           <Link href="/admin/usuarios/nuevo">Nuevo usuario</Link>
         </Button>
       </div>
-      <ul className="flex flex-col divide-y rounded-lg border bg-background">
+      <ul className="flex flex-col divide-y superficie">
         {usuarios.map((u) => (
           <li key={u.id}>
             <Link

@@ -19,13 +19,13 @@ export default async function MisMovimientos() {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
       <div>
-        <h1 className="text-xl font-semibold">Mis movimientos de hoy</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Mis movimientos de hoy</h1>
         <p className="text-sm text-muted-foreground first-letter:uppercase">{formatearFechaLarga(hoyBogota())}</p>
       </div>
       <p className="text-sm text-muted-foreground">
         Puedes anular lo que registraste hoy. Para corregir algo de otro día, solicítalo al Dueño.
       </p>
-      <ul className="flex flex-col divide-y rounded-lg border bg-background">
+      <ul className="flex flex-col divide-y superficie">
         {movimientos.map((m) => (
           <li key={m.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
             <div className="flex min-w-0 flex-1 flex-col gap-0.5">

@@ -1,5 +1,6 @@
 "use client";
 
+import { DoorOpenIcon, FlagIcon, PlayIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -7,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Campo } from "@/components/ui/campo";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { LineaTiempo } from "@/components/ui/linea-tiempo";
 import { Textarea } from "@/components/ui/textarea";
 import { formatearHora, horaBogota } from "@/lib/tiempo";
 import { corregirMarcacionAccion } from "./acciones";
@@ -18,6 +20,9 @@ const FILAS = [
   ["ingreso", "ingresoEn", "Ingreso a terapia"],
   ["fin", "finEn", "Fin de terapia"],
 ] as const;
+
+const ICONO = { llegada: DoorOpenIcon, ingreso: PlayIcon, fin: FlagIcon } as const;
+const TONO = { llegada: "info", ingreso: "aviso", fin: "exito" } as const;
 
 /** Sección "Tiempos" de la cita; el Dueño puede corregirlos con motivo (FR-030). */
 export function TiemposCita({
@@ -55,9 +60,9 @@ export function TiemposCita({
     });
 
   return (
-    <section aria-labelledby="titulo-tiempos" className="flex flex-col gap-2 rounded-lg border bg-background p-4">
+    <section aria-labelledby="titulo-tiempos" className="superficie flex flex-col gap-4 p-5 sm:p-6">
       <div className="flex items-center justify-between gap-2">
-        <h2 id="titulo-tiempos" className="font-medium">
+        <h2 id="titulo-tiempos" className="font-semibold">
           Tiempos
         </h2>
         {puedeCorregir && (
@@ -107,14 +112,19 @@ export function TiemposCita({
           </Dialog>
         )}
       </div>
-      <dl className="grid grid-cols-3 gap-2 text-sm">
-        {FILAS.map(([clave, campo, texto]) => (
-          <div key={clave}>
-            <dt className="text-muted-foreground">{texto}</dt>
-            <dd className="tabular-nums">{tiempos[campo] ? formatearHora(tiempos[campo]) : "—"}</dd>
-          </div>
-        ))}
-      </dl>
+      <LineaTiempo
+        eventos={FILAS.map(([clave, campo, texto]) => {
+          const hora = tiempos[campo];
+          return {
+            clave,
+            titulo: texto,
+            detalle: hora ? formatearHora(hora) : "Sin marcar",
+            icono: ICONO[clave],
+            tono: TONO[clave],
+            hecho: !!hora,
+          };
+        })}
+      />
     </section>
   );
 }

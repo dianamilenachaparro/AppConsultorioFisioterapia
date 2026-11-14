@@ -31,7 +31,7 @@ export default async function ConexionGoogle({ searchParams }: PageProps<"/finan
         ← Finanzas
       </Link>
       <div>
-        <h1 className="text-xl font-semibold">Conexión con Google</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Conexión con Google</h1>
         <p className="text-sm text-muted-foreground">
           Se usa solo para crear hojas de Google Sheets con el historial financiero. La aplicación solo puede ver los archivos que ella misma crea en tu Drive.
         </p>
